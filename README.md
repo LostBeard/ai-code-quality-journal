@@ -15,7 +15,13 @@ These projects stack on each other. Data enters the GPU at preprocessing and sta
 
 The vision behind all of this: prove that sophisticated AI can run on volunteered hardware — phones, desktops, browsers — without corporate datacenters, without API keys, without anyone's permission.
 
-To give you a sense of the difficulty: while building SpawnDev.ILGPU's WebAssembly multi-worker kernel dispatch, we discovered a **memory ordering bug in V8 and SpiderMonkey** — a missing memory fence in the `Atomics.wait` "not-equal" return path that breaks happens-before ordering with 3+ workers. We built a [live reproducer](https://lostbeard.github.io/v8-atomics-wait-bug/), [filed it with Chromium](https://issues.chromium.org/issues/495679735), got Google to confirm it, proved it affects ARM at the 2-worker level, and shipped a spin-barrier workaround in production. That's the kind of problem you encounter when you're writing a GPU compute transpiler that runs in a browser.
+To give you a sense of the difficulty level:
+
+- While building SpawnDev.ILGPU's WebAssembly multi-worker kernel dispatch, we discovered a **memory ordering bug in V8 and SpiderMonkey** — a missing memory fence in the `Atomics.wait` "not-equal" return path that breaks happens-before ordering with 3+ workers. We built a [live reproducer](https://lostbeard.github.io/v8-atomics-wait-bug/), [filed it with Chromium](https://issues.chromium.org/issues/495679735), Google confirmed and reproduced it, we proved it affects ARM at the 2-worker level (exposing that x86 TSO had been masking it), and shipped a spin-barrier workaround in production. That's the kind of problem you encounter when you're writing a GPU compute transpiler that runs in a browser.
+
+- When Microsoft announced the "Deputy Thread" model for .NET WASM threading — moving the entire runtime to a background worker, breaking synchronous JS interop — we identified it as an existential threat to the entire SpawnDev ecosystem. We [filed on dotnet/runtime](https://github.com/dotnet/runtime/issues/126438), [posted on dotnet/aspnetcore](https://github.com/dotnet/aspnetcore/issues/54365), [wrote a technical article](https://dev.to/lostbeard/blazor-wasms-deputy-thread-model-will-break-javascript-interop-heres-why-that-matters-1n9n), and engaged directly with the .NET runtime architect — who confirmed on the record that main-thread execution will remain supported. Our SpawnDev.BlazorJS.WebWorkers library (90,000+ downloads) already proves multi-threading works without the Deputy Thread model.
+
+This is real engineering at the intersection of .NET, WebAssembly, GPU compute, browser security models, and peer-to-peer networking. When we say AI tools need to produce correct code, we mean it — the failure modes are spec-level, hardware-level, and cross-engine.
 
 ## The Team
 
